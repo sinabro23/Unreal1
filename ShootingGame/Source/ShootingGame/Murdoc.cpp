@@ -1,0 +1,102 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "Murdoc.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Camera/CameraComponent.h"
+
+// Sets default values
+AMurdoc::AMurdoc():
+	BaseTurnRate(45.f),
+	BaseLookUpRate(45.f)
+{
+ 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+
+	// Create a camera boom (pulls in towards the character if there is a colliison)
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(RootComponent);
+	CameraBoom->TargetArmLength = 300.f; // the camera follows at this distance behind the character
+	CameraBoom->bUsePawnControlRotation = true; // rotate the arm based on the controller
+
+	// Create a follow camera
+	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // attach camera to end of boom
+	FollowCamera->bUsePawnControlRotation = false; // camera does not rotate relative to arm
+
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SM_Murdoc(TEXT("SkeletalMesh'/Game/ParagonMurdock/Characters/Heroes/Murdock/Meshes/Murdock.Murdock'"));
+	if (SM_Murdoc.Succeeded())
+	{
+		GetMesh()->SetSkeletalMesh(SM_Murdoc.Object);
+	}
+	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, -88.f));
+	GetMesh()->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.f));
+}
+
+// Called when the game starts or when spawned
+void AMurdoc::BeginPlay()
+{
+	Super::BeginPlay();
+	
+}
+
+void AMurdoc::MoveForward(float Value)
+{
+	if ((Controller != nullptr) && (Value != 0.0f))
+	{
+		// find out which way is forward
+		const FRotator Rotation{ Controller->GetControlRotation() };
+		const FRotator YawRotation{ 0, Rotation.Yaw, 0 };
+
+		const FVector Direction{ FRotationMatrix{YawRotation}.GetUnitAxis(EAxis::X) };
+		AddMovementInput(Direction, Value);
+	}
+}
+
+void AMurdoc::MoveRight(float Value)
+{
+	if ((Controller != nullptr) && (Value != 0.0f))
+	{
+		// find out which way is right
+		// 외적?과 관련된것 같은데 잘 모르겠다.
+		const FRotator Rotation{ Controller->GetControlRotation() };
+		const FRotator YawRotation{ 0, Rotation.Yaw, 0 };
+
+		const FVector Direction{ FRotationMatrix{YawRotation}.GetUnitAxis(EAxis::Y) };
+		AddMovementInput(Direction, Value);
+	}
+}
+
+void AMurdoc::TurnAtRate(float Rate)
+{
+	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AMurdoc::LookUpAtRate(float Rate)
+{
+	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds()); // deg/sec * sec/frame
+}
+
+// Called every frame
+void AMurdoc::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+}
+
+// Called to bind functionality to input
+void AMurdoc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+	check(PlayerInputComponent);
+
+	PlayerInputComponent->BindAxis(TEXT("MoveForward"), this, &AMurdoc::MoveForward);
+	PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &AMurdoc::MoveRight);
+	PlayerInputComponent->BindAxis(TEXT("TurnRate"), this, &AMurdoc::TurnAtRate);
+	PlayerInputComponent->BindAxis(TEXT("LookUpRate"), this, &AMurdoc::LookUpAtRate);
+	PlayerInputComponent->BindAxis(TEXT("Turn"), this, &APawn::AddControllerYawInput);
+	PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &APawn::AddControllerPitchInput);
+
+	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+}
