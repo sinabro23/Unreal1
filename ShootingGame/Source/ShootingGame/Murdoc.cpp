@@ -4,6 +4,10 @@
 #include "Murdoc.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
+#include "Engine/SkeletalMeshSocket.h"
 
 // Sets default values
 AMurdoc::AMurdoc():
@@ -23,6 +27,18 @@ AMurdoc::AMurdoc():
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // attach camera to end of boom
 	FollowCamera->bUsePawnControlRotation = false; // camera does not rotate relative to arm
+
+	// Don't rotate when the controller rotates. let the controller only affect the camera.
+	// 마우스 돌려도 캐릭터 안따라옴.
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+
+	// configure character movement
+	GetCharacterMovement()->bOrientRotationToMovement = true; // character moves in the derection of input.
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f); // at this rotation rate
+	GetCharacterMovement()->JumpZVelocity = 600.f;
+	GetCharacterMovement()->AirControl = 0.2f;
 
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SM_Murdoc(TEXT("SkeletalMesh'/Game/ParagonMurdock/Characters/Heroes/Murdock/Meshes/Murdock.Murdock'"));
 	if (SM_Murdoc.Succeeded())
@@ -77,6 +93,26 @@ void AMurdoc::LookUpAtRate(float Rate)
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds()); // deg/sec * sec/frame
 }
 
+void AMurdoc::FireWeapon()
+{
+	if (FireSound)
+	{
+		UGameplayStatics::PlaySound2D(this, FireSound);
+	}
+
+	const USkeletalMeshSocket* BarrelSocket = GetMesh()->GetSocketByName("BarrelSocket");
+
+	if (BarrelSocket)
+	{
+		const FTransform SocketTransform = BarrelSocket->GetSocketTransform(GetMesh());
+
+		if (MuzzleFlash)
+		{
+			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFlash, SocketTransform);
+		}
+	}
+}
+
 // Called every frame
 void AMurdoc::Tick(float DeltaTime)
 {
@@ -99,4 +135,5 @@ void AMurdoc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AMurdoc::FireWeapon);
 }
