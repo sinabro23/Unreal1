@@ -45,6 +45,11 @@ void UMurdocAnimInstance::UpdateAnimationProperties(float DeltaTime)
 			MovementRotation,
 			AimRotation).Yaw;
 
+		if (ShooterCharacter->GetVelocity().Size() > 0)
+		{
+			LastMovementOffsetYaw = MovementOffsetYaw;
+		}
+
 		//FString RotationMessage = FString::Printf(TEXT("Base Aim Rotation : %f"), AimRotation.Yaw);
 
 		// 움직이는 방향 //#include "Kismet/KismetMathLibrary.h"
