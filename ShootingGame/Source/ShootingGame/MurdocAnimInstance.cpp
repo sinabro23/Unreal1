@@ -4,6 +4,7 @@
 #include "MurdocAnimInstance.h"
 #include "Murdoc.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
 void UMurdocAnimInstance::UpdateAnimationProperties(float DeltaTime)
 {
@@ -31,6 +32,30 @@ void UMurdocAnimInstance::UpdateAnimationProperties(float DeltaTime)
 		{
 			bIsAccelerating = false;
 		}
+
+		// 쳐다보고 있는 방향
+		FRotator AimRotation =
+			ShooterCharacter->GetBaseAimRotation();
+
+		FRotator MovementRotation =
+			UKismetMathLibrary::MakeRotFromX(
+				ShooterCharacter->GetVelocity());
+
+		MovementOffsetYaw = UKismetMathLibrary::NormalizedDeltaRotator(
+			MovementRotation,
+			AimRotation).Yaw;
+
+		//FString RotationMessage = FString::Printf(TEXT("Base Aim Rotation : %f"), AimRotation.Yaw);
+
+		// 움직이는 방향 //#include "Kismet/KismetMathLibrary.h"
+
+		//FString MovementRotationMessage = FString::Printf(TEXT("Movement Rotation : %f"), MovementRotation.Yaw);
+
+	/*	FString OffsetMessage = FString::Printf(TEXT("Movement Offset Yaw : %f"), MovementOffsetYaw);
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::White, OffsetMessage);
+		}*/
 	}
 }
 

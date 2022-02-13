@@ -34,6 +34,9 @@ protected:
 	void LookUpAtRate(float Rate);
 
 	void FireWeapon();
+
+	// 총쏘면 빔의 끝의 로케이션을 구하는 함수
+	bool GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamLocation);
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -50,20 +53,28 @@ private:
 
 	// base turn rate, in deg/sec. other scaling may affect final turn rate
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		float BaseTurnRate;
+	float BaseTurnRate;
 
 	// base look up/down rate, in deg/sec other scaling may affect final turn rate
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		float BaseLookUpRate;
+	float BaseLookUpRate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
-		class USoundCue* FireSound;
+	class USoundCue* FireSound;
 	// flash spawnd at barrelsocket
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
-		class UParticleSystem* MuzzleFlash;
+	class UParticleSystem* MuzzleFlash;
 	// Montage for firing weapon.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
-		class UAnimMontage* HipFireMontage;
+	class UAnimMontage* HipFireMontage;
+
+	// 벽에 맞았을때의 fx
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	UParticleSystem* ImpactParticles;
+
+	// 스모크 트레일 위한것.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	UParticleSystem* BeamParticles;
 public:
 
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

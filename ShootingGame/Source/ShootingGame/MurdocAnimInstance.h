@@ -36,5 +36,9 @@ private:
 	// 캐릭터가 움직이고 있는지
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 		bool bIsAccelerating;
+
+	// 와리가리 하기 위한 Yaw offset
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	float MovementOffsetYaw;
 };
 
