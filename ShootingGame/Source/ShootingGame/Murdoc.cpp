@@ -32,7 +32,16 @@ AMurdoc::AMurdoc():
 	CameraDefaultFOV(0.f), // set in Beginplay
 	CameraZoomedFOV(35.f),
 	CameraCurrentFOV(0.f),
-	ZoomInterpSpeed(20.f)
+	ZoomInterpSpeed(20.f),
+	// 크로스헤어 벌어짐관련 요소들
+	CrosshairSpreadMultiplier(0.f),
+	CrosshairVelocityFactor(0.f),
+	CrosshairInAirFactor(0.f),
+	CrosshairAimFactor(0.f),
+	CrosshairShootingFactor(0.f),
+	// 격발 타이머 변수들
+	ShootTimeDuration(0.05f),
+	bFiringBullet(false)
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -200,6 +209,9 @@ void AMurdoc::FireWeapon()
 		AnimInstance->Montage_Play(HipFireMontage);
 		AnimInstance->Montage_JumpToSection(FName("StartFire"));
 	}
+
+	// 격발시 크로스헤어 관련 타이머 시작
+	StartCrosshairBulletFire();
 }
 
 bool AMurdoc::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamLocation)
@@ -213,7 +225,7 @@ bool AMurdoc::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& O
 	}
 
 	FVector2D CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
-	CrosshairLocation.Y -= 50.f; // HUD블루프린트에서 Y올렸었음
+	//CrosshairLocation.Y -= 50.f; // HUD블루프린트에서 Y올렸었음
 	FVector CrosshairWorldPosition;
 	FVector CrosshairWorldDirection;
 
@@ -326,7 +338,84 @@ void AMurdoc::CalculateCrosshairSpread(float DeltaTime)
 		VelocityMultiplierRange,
 		Velocity.Size());
 
-	CrosshairSpreadMultiplier = 0.5f + CrosshairVelocityFactor;
+
+	// CrosshairInAirFactor구하기 위함 (점프할때 크로스헤어 벌어진 정도)
+	if (GetCharacterMovement()->IsFalling()) // 캐릭터가 공중에 있으면
+	{
+		CrosshairInAirFactor = FMath::FInterpTo( // 천천히 값 바꾸기
+			CrosshairInAirFactor,
+			2.25f, // CrosshairInAirFactor가 목표로 하는 값
+			DeltaTime,
+			2.25f); // CrosshairInAirFactor가 목표까지 가는 속도
+	}
+	else // 캐릭터가 땅위에 있으면
+	{
+		CrosshairInAirFactor = FMath::FInterpTo(
+			CrosshairInAirFactor,
+			0.f,
+			DeltaTime,
+			30.f); // 땅에 닿았을때는 벌어진 크로스헤어 빨리 좁아져야하니깐
+	}
+	if (bAiming)
+	{
+		CrosshairAimFactor = FMath::FInterpTo(
+			CrosshairAimFactor,
+			0.6f,
+			DeltaTime,
+			30.f);
+	}
+	else
+	{
+		CrosshairAimFactor = FMath::FInterpTo(
+			CrosshairAimFactor,
+			0.f,
+			DeltaTime,
+			30.f);
+	}
+
+	// 0.05초동안 트루임
+	if (bFiringBullet)
+	{
+		CrosshairShootingFactor = FMath::FInterpTo(
+			CrosshairShootingFactor,
+			0.3f,
+			DeltaTime,
+			60.f
+		);
+	}
+	else
+	{
+		CrosshairShootingFactor = FMath::FInterpTo(
+			CrosshairShootingFactor,
+			0.f,
+			DeltaTime,
+			60.f
+		);
+	}
+
+	CrosshairSpreadMultiplier =
+		0.5f +
+		CrosshairVelocityFactor +
+		CrosshairInAirFactor -
+		CrosshairAimFactor +
+		CrosshairShootingFactor;
+}
+
+void AMurdoc::StartCrosshairBulletFire()
+{
+	bFiringBullet = true;
+
+	// 총쏘면 5초동안 bFiringBullet이 true가됨
+	GetWorldTimerManager().SetTimer(
+		CrosshairShootTimer,
+		this,
+		&AMurdoc::FinishCrosshairBulletFire,
+		ShootTimeDuration);
+}
+
+void AMurdoc::FinishCrosshairBulletFire()
+{
+	bFiringBullet = false;
 }
 
 // Called every frame
