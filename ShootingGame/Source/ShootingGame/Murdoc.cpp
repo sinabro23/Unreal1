@@ -13,13 +13,26 @@
 
 // Sets default values
 AMurdoc::AMurdoc():
+	// 기본 도는 비율
 	BaseTurnRate(45.f),
 	BaseLookUpRate(45.f),
+	// 에이밍 기준으로 도는속도 빠르게 느리게 하는 변수들
+	HipTurnRate(90.f),
+	HipLookUpRate(90.f),
+	AimingTurnRate(20.f),
+	AimingLookUpRate(20.f),
+	// 마우스 감도 관련 변수
+	MouseHipTurnRate(1.f),
+	MouseHipLookUpRate(1.f),
+	MouseAimingTurnRate(0.4f),
+	MouseAimingLookUpRate(0.4f),
+	// 조준하는지에 대한 불값
 	bAiming(false),
+	// 카메라 FOV 변수들
 	CameraDefaultFOV(0.f), // set in Beginplay
-	CameraZoomedFOV(45.f),
+	CameraZoomedFOV(35.f),
 	CameraCurrentFOV(0.f),
-	ZoomInterpSpeed(10.f)
+	ZoomInterpSpeed(20.f)
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -100,6 +113,36 @@ void AMurdoc::MoveRight(float Value)
 void AMurdoc::TurnAtRate(float Rate)
 {
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+}
+
+void AMurdoc::Turn(float Value)
+{
+	float TurnScaleFactor{};
+
+	if (bAiming)
+	{
+		TurnScaleFactor = MouseAimingTurnRate;
+	}
+	else
+	{
+		TurnScaleFactor = MouseHipTurnRate;
+	}
+	AddControllerYawInput(Value * TurnScaleFactor);
+}
+
+void AMurdoc::LookUp(float Value)
+{
+	float LookUpScaleFactor{};
+
+	if (bAiming)
+	{
+		LookUpScaleFactor = MouseAimingLookUpRate;
+	}
+	else
+	{
+		LookUpScaleFactor = MouseHipLookUpRate;
+	}
+	AddControllerPitchInput(Value * LookUpScaleFactor);
 }
 
 void AMurdoc::LookUpAtRate(float Rate)
@@ -255,12 +298,45 @@ void AMurdoc::CameraInterpZoom(float DeltaTime)
 	GetFollowCamera()->SetFieldOfView(CameraCurrentFOV);
 }
 
+void AMurdoc::SetLookRates()
+{
+	if (bAiming)
+	{
+		BaseTurnRate = AimingTurnRate;
+		BaseLookUpRate = AimingLookUpRate;
+	}
+	else
+	{
+		BaseTurnRate = HipTurnRate;
+		BaseLookUpRate = HipLookUpRate;
+	}
+}
+
+void AMurdoc::CalculateCrosshairSpread(float DeltaTime)
+{
+	// 이동속도 범위를 설정.
+	FVector2D WalkSpeedRange{ 0.f, 600.f };
+	// 속도 퍼센트 단위 0~1
+	FVector2D VelocityMultiplierRange{ 0.f,1.f };
+	FVector Velocity{ GetVelocity() };
+	Velocity.Z = 0.f; // 땅에 붙어서 이동하는거만 판단해야하니깐
+
+	CrosshairVelocityFactor = FMath::GetMappedRangeValueClamped(
+		WalkSpeedRange,
+		VelocityMultiplierRange,
+		Velocity.Size());
+
+	CrosshairSpreadMultiplier = 0.5f + CrosshairVelocityFactor;
+}
+
 // Called every frame
 void AMurdoc::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 	CameraInterpZoom(DeltaTime);
+	SetLookRates();
+	CalculateCrosshairSpread(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -273,8 +349,8 @@ void AMurdoc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &AMurdoc::MoveRight);
 	PlayerInputComponent->BindAxis(TEXT("TurnRate"), this, &AMurdoc::TurnAtRate);
 	PlayerInputComponent->BindAxis(TEXT("LookUpRate"), this, &AMurdoc::LookUpAtRate);
-	PlayerInputComponent->BindAxis(TEXT("Turn"), this, &APawn::AddControllerYawInput);
-	PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &APawn::AddControllerPitchInput);
+	PlayerInputComponent->BindAxis(TEXT("Turn"), this, &AMurdoc::Turn);
+	PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &AMurdoc::LookUp);
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
@@ -284,4 +360,10 @@ void AMurdoc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 		&AMurdoc::AimingButtonPressed);
 	PlayerInputComponent->BindAction("AimingButton", IE_Released, this,
 		&AMurdoc::AimingButtonReleased);
+}
+
+float AMurdoc::GetCrosshairSpreadMultiplier() const
+{
+
+	return CrosshairSpreadMultiplier;
 }

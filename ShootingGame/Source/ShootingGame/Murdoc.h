@@ -29,6 +29,11 @@ protected:
 	// @param rate this is a normarlized rate, i.e. 1.0 means 100% of desired turn rate
 	void TurnAtRate(float Rate);
 
+	// 마우스로 턴과 룩업관리
+	void Turn(float Value);
+
+	void LookUp(float Value);
+
 	// called via input to look up/down at a given rate.
 	// @param rate	this is a normalized rate, i.e means 100% of desired rate
 	void LookUpAtRate(float Rate);
@@ -43,6 +48,10 @@ protected:
 	void AimingButtonReleased();
 
 	void CameraInterpZoom(float DeltaTime);
+
+	void SetLookRates();
+
+	void CalculateCrosshairSpread(float DeltaTime);
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -64,6 +73,34 @@ private:
 	// base look up/down rate, in deg/sec other scaling may affect final turn rate
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	float BaseLookUpRate;
+	
+	// 조준 안할때의 도는 비율
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		float HipTurnRate;
+
+	// 조준 안할때 올려다보는 비율
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		float HipLookUpRate;
+
+	// 조준할때
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		float AimingTurnRate;
+
+	// 조준할때
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		float AimingLookUpRate;
+
+	// 조준안할떄 마우스 감도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"), meta = (ClampMin = "0.0", ClampMx = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float MouseHipTurnRate;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"), meta = (ClampMin = "0.0", ClampMx = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float MouseHipLookUpRate;
+
+	// 조준 할 때 마우스 감도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"), meta = (ClampMin = "0.0", ClampMx = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float MouseAimingTurnRate;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"), meta = (ClampMin = "0.0", ClampMx = "1.0", UIMin = "0.0", UIMax = "1.0"))
+		float MouseAimingLookUpRate;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	class USoundCue* FireSound;
@@ -98,6 +135,27 @@ private:
 	// 줌 바꿀때에 바뀌는 속도.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
 		float ZoomInterpSpeed;
+
+	// 크로스 헤어 벌어짐을 정함
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshiars, meta = (AllowPrivateAccess = "true"))
+		float CrosshairSpreadMultiplier;
+
+	// 퍼지는 속도
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshiars, meta = (AllowPrivateAccess = "true"))
+		float CrosshairVelocityFactor;
+
+	// 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshiars, meta = (AllowPrivateAccess = "true"))
+		float CrosshairInAirFactor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshiars, meta = (AllowPrivateAccess = "true"))
+		float CrosshairAimFactor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Crosshiars, meta = (AllowPrivateAccess = "true"))
+		float CrosshairShootingFactor;
+
+	UFUNCTION(BlueprintCallable)
+	float GetCrosshairSpreadMultiplier() const;
 
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
