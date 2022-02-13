@@ -100,7 +100,7 @@ private:
 		float ZoomInterpSpeed;
 
 public:
-
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	FORCEINLINE bool GetAiming() const { return bAiming; }
 };

@@ -17,7 +17,7 @@ AMurdoc::AMurdoc():
 	BaseLookUpRate(45.f),
 	bAiming(false),
 	CameraDefaultFOV(0.f), // set in Beginplay
-	CameraZoomedFOV(35.f),
+	CameraZoomedFOV(45.f),
 	CameraCurrentFOV(0.f),
 	ZoomInterpSpeed(10.f)
 {
@@ -27,9 +27,9 @@ AMurdoc::AMurdoc():
 	// Create a camera boom (pulls in towards the character if there is a colliison)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 180.f; // the camera follows at this distance behind the character
+	CameraBoom->TargetArmLength = 220.f; // the camera follows at this distance behind the character
 	CameraBoom->bUsePawnControlRotation = true; // rotate the arm based on the controller
-	CameraBoom->SocketOffset = FVector(0.0f, 50.f, 70.f);
+	CameraBoom->SocketOffset = FVector(0.0f, 60.f, 70.f);
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));

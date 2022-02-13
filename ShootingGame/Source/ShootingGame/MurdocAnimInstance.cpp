@@ -50,17 +50,7 @@ void UMurdocAnimInstance::UpdateAnimationProperties(float DeltaTime)
 			LastMovementOffsetYaw = MovementOffsetYaw;
 		}
 
-		//FString RotationMessage = FString::Printf(TEXT("Base Aim Rotation : %f"), AimRotation.Yaw);
-
-		// 움직이는 방향 //#include "Kismet/KismetMathLibrary.h"
-
-		//FString MovementRotationMessage = FString::Printf(TEXT("Movement Rotation : %f"), MovementRotation.Yaw);
-
-	/*	FString OffsetMessage = FString::Printf(TEXT("Movement Offset Yaw : %f"), MovementOffsetYaw);
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(1, 0.f, FColor::White, OffsetMessage);
-		}*/
+		bAiming = ShooterCharacter->GetAiming();
 	}
 }
 
