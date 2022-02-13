@@ -37,6 +37,12 @@ protected:
 
 	// 총쏘면 빔의 끝의 로케이션을 구하는 함수
 	bool GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamLocation);
+
+	// bAiming 을 true or false 로 설정
+	void AimingButtonPressed();
+	void AimingButtonReleased();
+
+	void CameraInterpZoom(float DeltaTime);
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -75,6 +81,24 @@ private:
 	// 스모크 트레일 위한것.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	UParticleSystem* BeamParticles;
+
+	// true when aiming
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+		bool bAiming;
+
+	// default camera FieldOfView 
+	float CameraDefaultFOV;
+
+	// FieldOfView when zoomed
+	float CameraZoomedFOV;
+
+	// 천천히 줌과 줌아닌상태를 바꾸게 하기위해 현재 FOV를 체크
+	float CameraCurrentFOV;
+
+	// 줌 바꿀때에 바뀌는 속도.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Combat, meta = (AllowPrivateAccess = "true"))
+		float ZoomInterpSpeed;
+
 public:
 
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

@@ -14,7 +14,12 @@
 // Sets default values
 AMurdoc::AMurdoc():
 	BaseTurnRate(45.f),
-	BaseLookUpRate(45.f)
+	BaseLookUpRate(45.f),
+	bAiming(false),
+	CameraDefaultFOV(0.f), // set in Beginplay
+	CameraZoomedFOV(35.f),
+	CameraCurrentFOV(0.f),
+	ZoomInterpSpeed(10.f)
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -22,9 +27,9 @@ AMurdoc::AMurdoc():
 	// Create a camera boom (pulls in towards the character if there is a colliison)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 300.f; // the camera follows at this distance behind the character
+	CameraBoom->TargetArmLength = 180.f; // the camera follows at this distance behind the character
 	CameraBoom->bUsePawnControlRotation = true; // rotate the arm based on the controller
-	CameraBoom->SocketOffset = FVector(0.0f, 60.f, 50.f);
+	CameraBoom->SocketOffset = FVector(0.0f, 50.f, 70.f);
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -56,7 +61,13 @@ AMurdoc::AMurdoc():
 void AMurdoc::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	//이때는 카메라가 생성 되어있으니깐 지금 fov관련 설정하는게 맞음	
+	if (FollowCamera)
+	{
+		CameraDefaultFOV = GetFollowCamera()->FieldOfView;
+		CameraCurrentFOV = CameraDefaultFOV;
+	}
+
 }
 
 void AMurdoc::MoveForward(float Value)
@@ -210,11 +221,46 @@ bool AMurdoc::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& O
 	return false;
 }
 
+void AMurdoc::AimingButtonPressed()
+{
+	bAiming = true;
+}
+
+void AMurdoc::AimingButtonReleased()
+{
+	bAiming = false;
+}
+
+void AMurdoc::CameraInterpZoom(float DeltaTime)
+{
+	// 현재 카메라의 fov를 설정 
+	if (bAiming)
+	{
+		// ZoomInterpSpeed 속도 만큼 밸류가 천천히 바뀜
+		CameraCurrentFOV = FMath::FInterpTo(
+			CameraCurrentFOV,
+			CameraZoomedFOV, // 목표값
+			DeltaTime,
+			ZoomInterpSpeed);
+	}
+	else
+	{
+		CameraCurrentFOV = FMath::FInterpTo(
+			CameraCurrentFOV,
+			CameraDefaultFOV, // 목표값
+			DeltaTime,
+			ZoomInterpSpeed);
+	}
+
+	GetFollowCamera()->SetFieldOfView(CameraCurrentFOV);
+}
+
 // Called every frame
 void AMurdoc::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	CameraInterpZoom(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -233,4 +279,9 @@ void AMurdoc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AMurdoc::FireWeapon);
+
+	PlayerInputComponent->BindAction("AimingButton", IE_Pressed, this,
+		&AMurdoc::AimingButtonPressed);
+	PlayerInputComponent->BindAction("AimingButton", IE_Released, this,
+		&AMurdoc::AimingButtonReleased);
 }
