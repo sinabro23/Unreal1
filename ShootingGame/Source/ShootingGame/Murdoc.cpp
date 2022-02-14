@@ -41,7 +41,11 @@ AMurdoc::AMurdoc():
 	CrosshairShootingFactor(0.f),
 	// 격발 타이머 변수들
 	ShootTimeDuration(0.05f),
-	bFiringBullet(false)
+	bFiringBullet(false),
+	// 자동 사격 관련 변수들
+	AutomaticFireRate(0.2f), //자동사격 간격 크로스헤어 벌어지는 시간보다는 크게해야함(0.5f였음) 안그러면 계속벌어짐
+	bShouldFire(true),
+	bFireButtonPressed(false)
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -401,6 +405,40 @@ void AMurdoc::CalculateCrosshairSpread(float DeltaTime)
 		CrosshairShootingFactor;
 }
 
+void AMurdoc::FireButtonPressed()
+{
+	bFireButtonPressed = true;
+	StartFireTimer();
+}
+
+void AMurdoc::FireButtonReleased()
+{
+	bFireButtonPressed = false;
+}
+
+void AMurdoc::StartFireTimer()
+{
+	if (bShouldFire)
+	{
+		FireWeapon();
+		bShouldFire = false;
+		GetWorldTimerManager().SetTimer(
+			AutoFireTimer,
+			this,
+			&AMurdoc::AutoFireReset,
+			AutomaticFireRate);
+	}
+}
+
+void AMurdoc::AutoFireReset()
+{
+	bShouldFire = true;
+	if (bFireButtonPressed)
+	{
+		StartFireTimer();
+	}
+}
+
 void AMurdoc::StartCrosshairBulletFire()
 {
 	bFiringBullet = true;
@@ -443,7 +481,11 @@ void AMurdoc::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
-	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this, &AMurdoc::FireWeapon);
+
+	PlayerInputComponent->BindAction("FireButton", IE_Pressed, this,
+		&AMurdoc::FireButtonPressed);
+	PlayerInputComponent->BindAction("FireButton", IE_Released, this,
+		&AMurdoc::FireButtonReleased);
 
 	PlayerInputComponent->BindAction("AimingButton", IE_Pressed, this,
 		&AMurdoc::AimingButtonPressed);
