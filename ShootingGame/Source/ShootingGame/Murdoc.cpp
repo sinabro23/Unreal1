@@ -45,7 +45,7 @@ AMurdoc::AMurdoc() :
 	ShootTimeDuration(0.05f),
 	bFiringBullet(false),
 	// 자동사격 간격 크로스헤어 벌어지는 시간보다는 크게해야함(0.5f였음) 안그러면 계속벌어짐
-	AutomaticFireRate(0.1f),
+	AutomaticFireRate(0.2f),
 	bShouldFire(true),
 	bFireButtonPressed(false),
 	// 아이템 추적 변수들
@@ -473,7 +473,26 @@ void AMurdoc::TraceForItems()
 				// 아이템 위젯을 보여줘라.
 				HitItem->GetPickupWidget()->SetVisibility(true);
 			}
+
+
+			if (TraceHitItemLastFrame)
+			{
+				if (HitItem != TraceHitItemLastFrame)
+				{
+					// We are hitting a different AItem this frame from last frame
+					// Or AItem is nullptr.
+					TraceHitItemLastFrame->GetPickupWidget()->SetVisibility(false);
+				}
+			}
+
+			// 마지막 프레임에 아이템의 참조값이 저장됨.
+			TraceHitItemLastFrame = HitItem;
 		}
+	}
+	else if (TraceHitItemLastFrame)
+	{
+		// 어떤 아이템과도 오버랩도 안됐기때문에 마지막 프레임에 저장된 아이템위젯도 보이면 안됨
+		TraceHitItemLastFrame->GetPickupWidget()->SetVisibility(false);
 	}
 }
 
