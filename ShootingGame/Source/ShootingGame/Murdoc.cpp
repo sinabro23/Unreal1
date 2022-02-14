@@ -10,6 +10,8 @@
 #include "Engine/SkeletalMeshSocket.h"
 #include "DrawDebugHelpers.h"
 #include "Particles/ParticleSystemComponent.h"
+#include "Item.h"
+#include "Components/WidgetComponent.h"
 
 // Sets default values
 AMurdoc::AMurdoc():
@@ -218,65 +220,40 @@ void AMurdoc::FireWeapon()
 	StartCrosshairBulletFire();
 }
 
-bool AMurdoc::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamLocation)
+bool AMurdoc::GetBeamEndLocation(
+	const FVector& MuzzleSocketLocation,
+	FVector& OutBeamLocation)
 {
-	//크로스헤어 포지션에서 Linetrace 만들려한다
-	FVector2D ViewportSize; // 현재 뷰포트 크기 구하기
-	if (GEngine && GEngine->GameViewport)
+	// 크로스헤어 트레이스 체크
+	FHitResult CrosshairHitResult;
+	bool bCrosshairHit = TraceUnderCrosshairs(CrosshairHitResult, OutBeamLocation);
+
+	if (bCrosshairHit) // 크로스헤어에서 뭔가 맞았으면
 	{
-		// 뷰포트 사이즈가 ViewportSize에 나옴
-		GEngine->GameViewport->GetViewportSize(ViewportSize);
+		// 일시적인 beam location - 아직 총구로부터 체크 안했음
+		OutBeamLocation = CrosshairHitResult.Location;
+	}
+	else // 크로스헤어에서 뭔가 안맞았으면
+	{
+		// 이미 TraceUnderCrosshairs함수에서 OutBeamLocation에서 라인트레이싱 끝지점으로 설정함
 	}
 
-	FVector2D CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
-	//CrosshairLocation.Y -= 50.f; // HUD블루프린트에서 Y올렸었음
-	FVector CrosshairWorldPosition;
-	FVector CrosshairWorldDirection;
-
-	// 이걸하고나면 크로스헤어에서 카메라 반대방향의 방향벡터와 크로스헤어의 월드포지션이 나옴
-	bool bScreenToWorld = UGameplayStatics::DeprojectScreenToWorld(
-		UGameplayStatics::GetPlayerController(this, 0),
-		CrosshairLocation,
-		CrosshairWorldPosition,
-		CrosshairWorldDirection);
-
-	if (bScreenToWorld) // 투영이 성공적이었다면
+	// 총구로부터 콜리전 체크(크로스헤어로부터하면 앞에 충돌판정이 안됐음)
+	FHitResult WeaponTraceHit;
+	const FVector WeaponTraceStart{ MuzzleSocketLocation };
+	const FVector StartToEnd{ OutBeamLocation - MuzzleSocketLocation };
+	const FVector WeaponTraceEnd{ MuzzleSocketLocation + StartToEnd * 1.25f };
+	GetWorld()->LineTraceSingleByChannel(
+		WeaponTraceHit,
+		WeaponTraceStart,
+		WeaponTraceEnd,
+		ECollisionChannel::ECC_Visibility);
+	if (WeaponTraceHit.bBlockingHit) // 총구로부터 라인트레이스해서 충돌 됐다면
 	{
-		FHitResult ScreenTraceHit;
-		const FVector Start{ CrosshairWorldPosition };
-		const FVector End{ CrosshairWorldPosition + CrosshairWorldDirection * 50'000.f };
-
-		OutBeamLocation = End;	 // 아무것도 맞지 않으면 라인트레이스의 엔드포인트가 빔의 엔드가될것
-
-		GetWorld()->LineTraceSingleByChannel( // 크로스헤어로부터 라인트레이스함
-			ScreenTraceHit,
-			Start,
-			End,
-			ECollisionChannel::ECC_Visibility);
-
-		// 크로스헤어로부터 맞았다면
-		if (ScreenTraceHit.bBlockingHit)
-		{
-			OutBeamLocation = ScreenTraceHit.Location;
-
-		}
-
-		// 총구로부터 콜리전 체크(크로스헤어로부터하면 앞에 충돌판정이 안됐음)
-		FHitResult WeaponTraceHit;
-		const FVector WeaponTraceStart{ MuzzleSocketLocation };
-		const FVector WeaponTraceEnd{ OutBeamLocation };
-		GetWorld()->LineTraceSingleByChannel(
-			WeaponTraceHit,
-			WeaponTraceStart,
-			WeaponTraceEnd,
-			ECollisionChannel::ECC_Visibility);
-		if (WeaponTraceHit.bBlockingHit) // 총구로부터 라인트레이스해서 충돌 됐다면
-		{
-			OutBeamLocation = WeaponTraceHit.Location;
-		}
-
+		OutBeamLocation = WeaponTraceHit.Location;
 		return true;
 	}
+
 	return false;
 }
 
@@ -439,6 +416,49 @@ void AMurdoc::AutoFireReset()
 	}
 }
 
+bool AMurdoc::TraceUnderCrosshairs(FHitResult& OutHitResult, FVector& OutHitLocation)
+{
+	// 크로스헤어 위치 찾기위해 뷰포트 사이즈 구하기
+	FVector2D ViewportSize; // 현재 뷰포트 크기 구하기
+	if (GEngine && GEngine->GameViewport)
+	{
+		// 뷰포트 사이즈가 ViewportSize에 나옴
+		GEngine->GameViewport->GetViewportSize(ViewportSize);
+	}
+
+	FVector2D CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f); // 크로스헤어 위치가 뷰포트의 절반이니깐
+	FVector CrosshairWorldPosition;
+	FVector CrosshairWorldDirection;
+
+	// 이걸하고나면 크로스헤어에서 카메라 반대방향의 방향벡터와 크로스헤어의 월드포지션이 나옴
+	bool bScreenToWorld = UGameplayStatics::DeprojectScreenToWorld(
+		UGameplayStatics::GetPlayerController(this, 0),
+		CrosshairLocation,
+		CrosshairWorldPosition,
+		CrosshairWorldDirection);
+
+	if (bScreenToWorld)
+	{
+		// 크로스헤어 월드로케이션으로부터
+		const FVector Start{ CrosshairWorldPosition };
+		const FVector End{ Start + CrosshairWorldDirection * 50'000.f };
+		OutHitLocation = End; // 맞은게 없으면 OutHitLocation은 그냥 라인트레이싱 최대거리
+
+		GetWorld()->LineTraceSingleByChannel(
+			OutHitResult,
+			Start,
+			End,
+			ECollisionChannel::ECC_Visibility);
+
+		if (OutHitResult.bBlockingHit)
+		{
+			OutHitLocation = OutHitResult.Location;
+			return true;
+		}
+	}
+	return false;
+}
+
 void AMurdoc::StartCrosshairBulletFire()
 {
 	bFiringBullet = true;
@@ -464,6 +484,19 @@ void AMurdoc::Tick(float DeltaTime)
 	CameraInterpZoom(DeltaTime);
 	SetLookRates();
 	CalculateCrosshairSpread(DeltaTime);
+
+	FHitResult ItemTraceResult;
+	FVector HitLocation;
+	TraceUnderCrosshairs(ItemTraceResult, HitLocation);
+	if (ItemTraceResult.bBlockingHit)
+	{
+		AItem* HitItem = Cast<AItem>(ItemTraceResult.Actor);
+		if (HitItem && HitItem->GetPickupWidget())
+		{
+			// 아이템 위젯을 보여줘라.
+			HitItem->GetPickupWidget()->SetVisibility(true);
+		}
+	}
 }
 
 // Called to bind functionality to input

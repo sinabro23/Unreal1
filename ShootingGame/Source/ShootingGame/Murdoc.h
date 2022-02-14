@@ -60,6 +60,9 @@ protected:
 	UFUNCTION()
 	void AutoFireReset();
 
+	// 크로스헤어로 라인트레이싱해서 충돌되는 아이템 찾기
+	bool TraceUnderCrosshairs(FHitResult& OutHitResult, FVector& OutHitLocation);
+
 	void StartCrosshairBulletFire();
 
 	UFUNCTION()
@@ -74,10 +77,10 @@ public:
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* CameraBoom;
+	class USpringArmComponent* CameraBoom;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UCameraComponent* FollowCamera;
+	class UCameraComponent* FollowCamera;
 
 	// base turn rate, in deg/sec. other scaling may affect final turn rate
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
