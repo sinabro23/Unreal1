@@ -14,7 +14,7 @@
 #include "Components/WidgetComponent.h"
 
 // Sets default values
-AMurdoc::AMurdoc():
+AMurdoc::AMurdoc() :
 	// 기본 도는 비율
 	BaseTurnRate(45.f),
 	BaseLookUpRate(45.f),
@@ -35,7 +35,7 @@ AMurdoc::AMurdoc():
 	CameraZoomedFOV(35.f),
 	CameraCurrentFOV(0.f),
 	ZoomInterpSpeed(20.f),
-	// 크로스헤어 벌어짐관련 요소들
+	// 크로스헤어 스프레드 요소들
 	CrosshairSpreadMultiplier(0.f),
 	CrosshairVelocityFactor(0.f),
 	CrosshairInAirFactor(0.f),
@@ -44,20 +44,23 @@ AMurdoc::AMurdoc():
 	// 격발 타이머 변수들
 	ShootTimeDuration(0.05f),
 	bFiringBullet(false),
-	// 자동 사격 관련 변수들
-	AutomaticFireRate(0.2f), //자동사격 간격 크로스헤어 벌어지는 시간보다는 크게해야함(0.5f였음) 안그러면 계속벌어짐
+	// 자동사격 간격 크로스헤어 벌어지는 시간보다는 크게해야함(0.5f였음) 안그러면 계속벌어짐
+	AutomaticFireRate(0.1f),
 	bShouldFire(true),
-	bFireButtonPressed(false)
+	bFireButtonPressed(false),
+	// 아이템 추적 변수들
+	bShouldTraceForItems(false),
+	OverlappedItemCount(0)
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Create a camera boom (pulls in towards the character if there is a colliison)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 220.f; // the camera follows at this distance behind the character
+	CameraBoom->TargetArmLength = 180.f; // the camera follows at this distance behind the character
 	CameraBoom->bUsePawnControlRotation = true; // rotate the arm based on the controller
-	CameraBoom->SocketOffset = FVector(0.0f, 60.f, 70.f);
+	CameraBoom->SocketOffset = FVector(0.f, 50.f, 70.f);
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -76,11 +79,6 @@ AMurdoc::AMurdoc():
 	GetCharacterMovement()->JumpZVelocity = 600.f;
 	GetCharacterMovement()->AirControl = 0.2f;
 
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> SM_Murdoc(TEXT("SkeletalMesh'/Game/ParagonMurdock/Characters/Heroes/Murdock/Meshes/Murdock.Murdock'"));
-	if (SM_Murdoc.Succeeded())
-	{
-		GetMesh()->SetSkeletalMesh(SM_Murdoc.Object);
-	}
 	GetMesh()->SetRelativeLocation(FVector(0.0f, 0.0f, -88.f));
 	GetMesh()->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.f));
 }
@@ -89,6 +87,7 @@ AMurdoc::AMurdoc():
 void AMurdoc::BeginPlay()
 {
 	Super::BeginPlay();
+
 	//이때는 카메라가 생성 되어있으니깐 지금 fov관련 설정하는게 맞음	
 	if (FollowCamera)
 	{
@@ -130,6 +129,11 @@ void AMurdoc::TurnAtRate(float Rate)
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 }
 
+void AMurdoc::LookUpAtRate(float Rate)
+{
+	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds()); // deg/sec * sec/frame
+}
+
 void AMurdoc::Turn(float Value)
 {
 	float TurnScaleFactor{};
@@ -158,11 +162,6 @@ void AMurdoc::LookUp(float Value)
 		LookUpScaleFactor = MouseHipLookUpRate;
 	}
 	AddControllerPitchInput(Value * LookUpScaleFactor);
-}
-
-void AMurdoc::LookUpAtRate(float Rate)
-{
-	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds()); // deg/sec * sec/frame
 }
 
 void AMurdoc::FireWeapon()
@@ -319,7 +318,6 @@ void AMurdoc::CalculateCrosshairSpread(float DeltaTime)
 		VelocityMultiplierRange,
 		Velocity.Size());
 
-
 	// CrosshairInAirFactor구하기 위함 (점프할때 크로스헤어 벌어진 정도)
 	if (GetCharacterMovement()->IsFalling()) // 캐릭터가 공중에 있으면
 	{
@@ -337,6 +335,7 @@ void AMurdoc::CalculateCrosshairSpread(float DeltaTime)
 			DeltaTime,
 			30.f); // 땅에 닿았을때는 벌어진 크로스헤어 빨리 좁아져야하니깐
 	}
+
 	if (bAiming)
 	{
 		CrosshairAimFactor = FMath::FInterpTo(
@@ -459,6 +458,25 @@ bool AMurdoc::TraceUnderCrosshairs(FHitResult& OutHitResult, FVector& OutHitLoca
 	return false;
 }
 
+void AMurdoc::TraceForItems()
+{
+	if (bShouldTraceForItems)
+	{
+		FHitResult ItemTraceResult;
+		FVector HitLocation;
+		TraceUnderCrosshairs(ItemTraceResult, HitLocation);
+		if (ItemTraceResult.bBlockingHit)
+		{
+			AItem* HitItem = Cast<AItem>(ItemTraceResult.Actor);
+			if (HitItem && HitItem->GetPickupWidget())
+			{
+				// 아이템 위젯을 보여줘라.
+				HitItem->GetPickupWidget()->SetVisibility(true);
+			}
+		}
+	}
+}
+
 void AMurdoc::StartCrosshairBulletFire()
 {
 	bFiringBullet = true;
@@ -481,22 +499,15 @@ void AMurdoc::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	CameraInterpZoom(DeltaTime);
+	CameraInterpZoom(DeltaTime); // 카메라 FOV 천천히 바뀌게
+	// 마우스 감도 변경
 	SetLookRates();
+	// 크로스헤어 벌어짐 계산
 	CalculateCrosshairSpread(DeltaTime);
 
-	FHitResult ItemTraceResult;
-	FVector HitLocation;
-	TraceUnderCrosshairs(ItemTraceResult, HitLocation);
-	if (ItemTraceResult.bBlockingHit)
-	{
-		AItem* HitItem = Cast<AItem>(ItemTraceResult.Actor);
-		if (HitItem && HitItem->GetPickupWidget())
-		{
-			// 아이템 위젯을 보여줘라.
-			HitItem->GetPickupWidget()->SetVisibility(true);
-		}
-	}
+	// 오버랩된 아이템 개수를 체크하고 그러면 추적한다
+	TraceForItems();
+
 }
 
 // Called to bind functionality to input
@@ -531,3 +542,18 @@ float AMurdoc::GetCrosshairSpreadMultiplier() const
 
 	return CrosshairSpreadMultiplier;
 }
+
+void AMurdoc::IncrementOverlappedItemCount(int8 Amount)
+{
+	if ((OverlappedItemCount + Amount) <= 0)
+	{
+		OverlappedItemCount = 0;
+		bShouldTraceForItems = false;
+	}
+	else
+	{
+		OverlappedItemCount += Amount;
+		bShouldTraceForItems = true;
+	}
+}
+

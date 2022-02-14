@@ -63,6 +63,9 @@ protected:
 	// 크로스헤어로 라인트레이싱해서 충돌되는 아이템 찾기
 	bool TraceUnderCrosshairs(FHitResult& OutHitResult, FVector& OutHitLocation);
 
+	// OverlappedItemCount>0이면 아이템 추적(정보창)
+	void TraceForItems();
+
 	void StartCrosshairBulletFire();
 
 	UFUNCTION()
@@ -190,11 +193,22 @@ private:
 
 	FTimerHandle CrosshairShootTimer;
 
+	// 매프레임마다 아이템을 trace해야하면
+	bool bShouldTraceForItems;
+
+	// 오버랩된 AItem의 개수
+	int8 OverlappedItemCount;
+
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	FORCEINLINE bool GetAiming() const { return bAiming; }
 
 	UFUNCTION(BlueprintCallable)
-	float GetCrosshairSpreadMultiplier() const;
+		float GetCrosshairSpreadMultiplier() const;
+
+	FORCEINLINE int8 GetOverlappedItemCount() const { return OverlappedItemCount; }
+
+	// 추적하는 아이템이 0이되면 bShouldTraceForItems를 false로 만듦
+	void IncrementOverlappedItemCount(int8 Amount);
 };
