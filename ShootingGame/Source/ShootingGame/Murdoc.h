@@ -66,6 +66,8 @@ protected:
 	// OverlappedItemCount>0이면 아이템 추적(정보창)
 	void TraceForItems();
 
+	void SpawnDefaultWeapon();
+
 	void StartCrosshairBulletFire();
 
 	UFUNCTION()
@@ -201,7 +203,16 @@ private:
 
 	// 마지막 프레임에 추적했던 AItem
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Items, meta = (AllowPrivateAccess = "true"))
-		class AItem* TraceHitItemLastFrame;
+	class AItem* TraceHitItemLastFrame;
+
+
+	// 현재 장비하고있는 무기
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	class AWeapon* EquippedWeapon;
+
+	// 블루프린트에서 초기 무기 클래스를 설정하기 위함
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AWeapon> DefaultWeaponClass; //TSubclassOf는 호환되지 않는 클래스들은 블루프린트 목록에서 안나타나게
 
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

@@ -12,7 +12,8 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "Item.h"
 #include "Components/WidgetComponent.h"
-
+#include "Weapon.h"
+#include "Engine/SkeletalMeshSocket.h"
 // Sets default values
 AMurdoc::AMurdoc() :
 	// 기본 도는 비율
@@ -95,6 +96,8 @@ void AMurdoc::BeginPlay()
 		CameraCurrentFOV = CameraDefaultFOV;
 	}
 
+	// 기본 무기 스폰하고 메쉬에 장착함
+	SpawnDefaultWeapon();
 }
 
 void AMurdoc::MoveForward(float Value)
@@ -493,6 +496,26 @@ void AMurdoc::TraceForItems()
 	{
 		// 어떤 아이템과도 오버랩도 안됐기때문에 마지막 프레임에 저장된 아이템위젯도 보이면 안됨
 		TraceHitItemLastFrame->GetPickupWidget()->SetVisibility(false);
+	}
+}
+
+void AMurdoc::SpawnDefaultWeapon()
+{
+	// 블루프린트에서 설정 안했으면 nullptr일거임
+	if (DefaultWeaponClass)
+	{
+		AWeapon* DefaultWeapon = GetWorld()->SpawnActor<AWeapon>(DefaultWeaponClass);
+
+		// 스폰한 무기 소켓에 장착해야함
+		const USkeletalMeshSocket* HandSocket = GetMesh()->GetSocketByName(FName("RightHandSocket"));
+		if (HandSocket)
+		{
+			// 무기를 만든 손의 소켓에 장착함
+			HandSocket->AttachActor(DefaultWeapon, GetMesh());
+		}
+
+		// 기본무기를 현재 장착무기로 세팅
+		EquippedWeapon = DefaultWeapon;
 	}
 }
 
